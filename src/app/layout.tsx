@@ -1,7 +1,8 @@
 // app/layout.tsx
 import './globals.css'
 import { ReactNode } from 'react'
-import {Metadata} from "next"; // Import ReactNode
+import {Metadata} from "next";
+import {ThemeProvider} from "next-themes"; // Import ReactNode
 
 // Type your metadata object
 export const metadata: Metadata = {
@@ -23,9 +24,16 @@ interface LayoutProps {
 
 export default function RootLayout({ children }: LayoutProps) {
     return (
-        <html lang="en">
-        <body>
-        {children}
+        <html lang="en" suppressHydrationWarning>
+        <body suppressHydrationWarning>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            {children}
+        </ThemeProvider>
         </body>
         </html>
     )
