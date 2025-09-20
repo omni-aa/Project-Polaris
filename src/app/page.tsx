@@ -1,14 +1,12 @@
 'use client'
-
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-
 import {GiHamburgerMenu} from "react-icons/gi";
-import AuthForm from "@/components/authForm/AuthForm";
-import Sidebar from "@/components/ui/Sidebar";
+import ZoomedImage from "@/components/ui/ZoomedImage";
 import MessageInput from "@/components/messageComponents/MessageInput";
 import MessageList from "@/components/messageComponents/MessageList";
-import ZoomedImage from "@/components/ui/ZoomedImage";
+import Sidebar from "@/components/ui/Sidebar";
+import AuthForm from "@/components/authForm/AuthForm";
 
 
 
@@ -24,7 +22,7 @@ interface Message {
 
 
 
-function App() {
+export default function App() {
     const [username, setUsername] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [currentChannel, setCurrentChannel] = useState("general");
@@ -54,7 +52,7 @@ function App() {
         };
     }, [socket]);
 
-    // THIS MUST BE FIXED  IT FETCHES THE CHANNEL BEFORE AUTH
+
     useEffect(() => {
         fetch("http://localhost:3001/channels")
             .then(res => res.json())
@@ -209,4 +207,3 @@ function App() {
     );
 }
 
-export default App;
