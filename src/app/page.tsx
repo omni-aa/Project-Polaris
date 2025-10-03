@@ -116,6 +116,28 @@ export default function Home() {
         }
     };
 
+    // In your page.tsx, add this function
+    const handleReply = (messageId: string | number, replyText: string) => {
+        if (!socket || !currentChannel) return;
+
+        const replyData = {
+            messageId: messageId,
+            channel: currentChannel,
+            message: replyText,
+            timestamp: new Date().toISOString()
+        };
+
+        socket.emit("send_reply", replyData, (response: any) => {
+            if (response && response.success) {
+                console.log("✅ Reply sent successfully!");
+                // The reply will be broadcasted to all users via socket
+            } else {
+                console.error("❌ Failed to send reply:", response?.error);
+                alert("Failed to send reply. Please try again.");
+            }
+        });
+    };
+
     // Function to fetch channels for a specific topic
     const fetchChannelsByTopic = async (topicId: string): Promise<Channel[]> => {
         try {
@@ -283,6 +305,7 @@ export default function Home() {
                 <div className="flex-1 overflow-y-auto bg-gray-100">
                     {currentChannel ? (
                         <MessageList
+                            onReply={handleReply}
                             messages={messages}
                             onImageZoom={setZoomedImage}
                         />

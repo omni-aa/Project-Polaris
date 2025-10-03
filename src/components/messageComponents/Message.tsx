@@ -1,4 +1,6 @@
 // components/messageComponents/Message.tsx
+import { useState, useEffect } from "react";
+
 interface MessageProps {
     message: {
         id?: number | string;
@@ -6,11 +8,33 @@ interface MessageProps {
         message: string;
         fileUrl?: string;
         fileName?: string;
+        replies?: Reply[]; // Make sure this is defined
     };
     onImageZoom: (url: string) => void;
+    onReply: (messageId: string | number, replyText: string) => void;
 }
 
-export default function Message({ message, onImageZoom }: MessageProps) {
+interface Reply {
+    id: number | string;
+    user: string;
+    message: string;
+    fileUrl?: string;
+    fileName?: string;
+    timestamp: string;
+}
+
+export default function Message({ message, onImageZoom, onReply }: MessageProps) {
+    const [isReplying, setIsReplying] = useState(false);
+    const [replyText, setReplyText] = useState("");
+    const [showReplies, setShowReplies] = useState(false);
+    const [localReplies, setLocalReplies] = useState<Reply[]>([]);
+
+    // Sync localReplies with message.replies
+    useEffect(() => {
+        console.log(`🔄 Message ${message.id} replies updated:`, message.replies?.length || 0);
+        setLocalReplies(message.replies || []);
+    }, [message.replies, message.id]);
+
     const isImage = (filename: string) =>
         /\.(jpe?g|png|gif|webp)$/i.test(filename);
 
@@ -29,6 +53,15 @@ export default function Message({ message, onImageZoom }: MessageProps) {
         onImageZoom(url);
     };
 
+    const handleReplySubmit = () => {
+        if (replyText.trim() && message.id) {
+            console.log(`📤 Submitting reply to message ${message.id}:`, replyText);
+            onReply(message.id, replyText);
+            setReplyText("");
+            setIsReplying(false);
+        }
+    };
+
     // Generate consistent color based on username
     const getUserColor = (username: string) => {
         const colors = [
@@ -38,6 +71,8 @@ export default function Message({ message, onImageZoom }: MessageProps) {
         const index = username.charCodeAt(0) % colors.length;
         return colors[index];
     };
+
+    console.log(`🎯 Rendering Message ${message.id} with ${localReplies.length} replies`);
 
     return (
         <div className="flex items-start gap-3 px-4 py-3 bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150">
@@ -113,7 +148,10 @@ export default function Message({ message, onImageZoom }: MessageProps) {
 
                 {/* Reddit-style Actions */}
                 <div className="flex items-center gap-4 mt-2">
-                    <button className="text-gray-500 hover:text-gray-700 text-xs font-medium flex items-center gap-1 transition-colors">
+                    <button
+                        onClick={() => setIsReplying(!isReplying)}
+                        className="text-gray-500 hover:text-gray-700 text-xs font-medium flex items-center gap-1 transition-colors"
+                    >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
@@ -132,6 +170,72 @@ export default function Message({ message, onImageZoom }: MessageProps) {
                         Report
                     </button>
                 </div>
+
+                {/* Reply Input */}
+                {isReplying && (
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write a reply..."
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-500 text-sm resize-none transition-all duration-200"
+                            rows={3}
+                        />
+                        <div className="flex justify-end gap-2 mt-2">
+                            <button
+                                onClick={() => setIsReplying(false)}
+                                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleReplySubmit}
+                                disabled={!replyText.trim()}
+                                className="px-4 py-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-sm font-medium rounded-full transition-colors duration-200 disabled:cursor-not-allowed"
+                            >
+                                Reply
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Show Replies Toggle */}
+                {localReplies.length > 0 && (
+                    <div className="mt-2">
+                        <button
+                            onClick={() => setShowReplies(!showReplies)}
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium flex items-center gap-1"
+                        >
+                            {showReplies ? 'Hide' : 'Show'} {localReplies.length} {localReplies.length === 1 ? 'reply' : 'replies'}
+                            <svg
+                                className={`w-3 h-3 transition-transform ${showReplies ? 'rotate-180' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+                )}
+
+                {/* Replies List */}
+                {showReplies && localReplies.map((reply) => (
+                    <div key={reply.id} className="mt-3 ml-6 pl-4 border-l-2 border-gray-200">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-5 h-5 ${getUserColor(reply.user)} rounded-full flex items-center justify-center text-white text-xs font-bold`}>
+                                {reply.user.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-xs font-medium text-gray-900">
+                                u/{reply.user}
+                            </span>
+                            <span className="text-xs text-gray-500">• 1h ago</span>
+                        </div>
+                        <div className="text-gray-800 text-sm leading-relaxed">
+                            {reply.message}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

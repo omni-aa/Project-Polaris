@@ -1,4 +1,7 @@
+'use client';
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { IoLogoInstagram, IoEye, IoEyeOff } from "react-icons/io5";
 
 interface AuthFormProps {
@@ -6,6 +9,7 @@ interface AuthFormProps {
 }
 
 export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
+    const router = useRouter();
     const [isLogin, setIsLogin] = useState(true);
     const [tempName, setTempName] = useState("");
     const [tempPassword, setTempPassword] = useState("");
@@ -40,6 +44,8 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps) {
 
             if (isLogin) {
                 onAuthSuccess(data.token, data.username);
+                // Navigate to home page after successful login
+                router.push("/home");
             } else {
                 alert("🎉 Account created successfully! Please sign in with your credentials.");
                 setIsLogin(true);

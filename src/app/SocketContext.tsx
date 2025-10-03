@@ -10,6 +10,18 @@ interface Message {
     fileUrl?: string;
     fileName?: string;
     timestamp?: string;
+    replies?: Reply[];
+}
+
+interface Reply {
+    id: number | string;
+    message_id: number | string;
+    channel: string;
+    user: string;
+    message: string;
+    fileUrl?: string;
+    fileName?: string;
+    timestamp: string;
 }
 
 interface SocketContextType {
@@ -58,7 +70,6 @@ export function SocketProvider({ children, token }: { children: React.ReactNode;
 
         newSocket.on("connect", () => {
             console.log("✅ Socket connected:", newSocket.id);
-            // Auto-join current channel when reconnecting
             if (currentChannel) {
                 newSocket.emit("join_channel", currentChannel);
             }
@@ -91,9 +102,39 @@ export function SocketProvider({ children, token }: { children: React.ReactNode;
             console.error("🚫 Join error:", error);
         };
 
+        // Handle incoming replies - FIXED VERSION
+        const handleReceiveReply = (reply: Reply) => {
+            console.log("💬 NEW REPLY RECEIVED:", reply);
+            console.log("Reply channel:", reply.channel, "Current channel:", currentChannel);
+
+            // Always process the reply regardless of channel for now
+            setMessages(prev => {
+                console.log("🔄 Updating messages with new reply...");
+                console.log("Looking for message ID:", reply.message_id);
+                console.log("Available message IDs:", prev.map(m => ({ id: m.id, type: typeof m.id })));
+
+                const updatedMessages = prev.map(msg => {
+                    // Compare both as strings to handle number/string mismatch
+                    if (msg.id?.toString() === reply.message_id.toString()) {
+                        console.log("✅ FOUND MATCHING MESSAGE! Adding reply...");
+                        const updatedReplies = [...(msg.replies || []), reply];
+                        console.log("Updated replies count:", updatedReplies.length);
+                        return {
+                            ...msg,
+                            replies: updatedReplies
+                        };
+                    }
+                    return msg;
+                });
+
+                return updatedMessages;
+            });
+        };
+
         newSocket.on("receive_message", handleNewMessage);
         newSocket.on("channel_history", handleChannelHistory);
         newSocket.on("join_error", handleJoinError);
+        newSocket.on("receive_reply", handleReceiveReply);
 
         setSocket(newSocket);
 
@@ -102,6 +143,7 @@ export function SocketProvider({ children, token }: { children: React.ReactNode;
             newSocket.off("receive_message", handleNewMessage);
             newSocket.off("channel_history", handleChannelHistory);
             newSocket.off("join_error", handleJoinError);
+            newSocket.off("receive_reply", handleReceiveReply);
             newSocket.disconnect();
         };
     }, [token]);
