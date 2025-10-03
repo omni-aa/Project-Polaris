@@ -1,19 +1,12 @@
 // components/ui/Sidebar.tsx
-import {Avatar} from "@heroui/react";
+'use client'
+
 import { useState } from "react";
 import { IoChevronDown, IoChevronForward, IoClose } from "react-icons/io5";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
-import {ModeToggle} from "@/components/ui/dark-mode-toggle";
-
-interface Topic {
-    id: string;
-    name: string;
-    description: string;
-    icon: string;
-    color: string;
-    channel_count: number;
-}
+import { ModeToggle } from "@/components/ui/dark-mode-toggle";
+import {useTopics} from "@/app/hooks/useTopics";
 
 interface Channel {
     id: string;
@@ -24,34 +17,29 @@ interface Channel {
 }
 
 interface SidebarProps {
-    topics: Topic[];
     channels: Channel[];
     currentChannel: string;
     username: string;
     onChannelChange: (channel: string) => void;
     onLogout: () => void;
     onClose?: () => void;
-    fetchChannelsByTopic: (topicId: string) => Promise<Channel[]>;
-    isLoading: boolean;
+    isLoading?: boolean;
     isMobileOpen?: boolean;
 }
 
 export default function Sidebar({
-                                    topics,
                                     channels,
                                     currentChannel,
                                     username,
                                     onChannelChange,
                                     onLogout,
                                     onClose,
-                                    fetchChannelsByTopic,
-                                    isLoading,
+                                    isLoading = false,
                                     isMobileOpen = false
                                 }: SidebarProps) {
 
+    const { topics, isLoading: topicsLoading, error } = useTopics();
     const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
-    const [topicChannels, setTopicChannels] = useState<Record<string, Channel[]>>({});
-
     const router = useRouter();
 
     const handleChannelChange = (channel: string) => {
@@ -61,27 +49,13 @@ export default function Sidebar({
         }
     };
 
-    const toggleTopic = async (topic: Topic) => {
+    const toggleTopic = (topicId: string) => {
         const newExpandedTopics = new Set(expandedTopics);
-
-        if (expandedTopics.has(topic.id)) {
-            newExpandedTopics.delete(topic.id);
+        if (expandedTopics.has(topicId)) {
+            newExpandedTopics.delete(topicId);
         } else {
-            newExpandedTopics.add(topic.id);
-            // Fetch channels if not already loaded
-            if (!topicChannels[topic.id]) {
-                try {
-                    const channels = await fetchChannelsByTopic(topic.id);
-                    setTopicChannels(prev => ({
-                        ...prev,
-                        [topic.id]: channels
-                    }));
-                } catch (err) {
-                    console.error("Error loading channels:", err);
-                }
-            }
+            newExpandedTopics.add(topicId);
         }
-
         setExpandedTopics(newExpandedTopics);
     };
 
@@ -101,11 +75,34 @@ export default function Sidebar({
         "Content Policy", "Privacy Policy", "User Agreement"
     ];
 
-    if (isLoading) {
+    const isOverallLoading = isLoading || topicsLoading;
+
+    if (isOverallLoading) {
         return (
             <aside className="w-full md:w-80 h-full bg-white dark:bg-[#1A1A1B] text-gray-900 dark:text-[#D7DADC] flex flex-col border-r border-gray-200 dark:border-[#343536] overflow-y-auto">
                 <div className="flex-1 p-4 flex items-center justify-center">
-                    <div className="text-gray-500 dark:text-[#818384]">Loading topics...</div>
+                    <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                        <div className="text-gray-500 dark:text-[#818384] text-sm">Loading topics...</div>
+                    </div>
+                </div>
+            </aside>
+        );
+    }
+
+    if (error) {
+        return (
+            <aside className="w-full md:w-80 h-full bg-white dark:bg-[#1A1A1B] text-gray-900 dark:text-[#D7DADC] flex flex-col border-r border-gray-200 dark:border-[#343536] overflow-y-auto">
+                <div className="flex-1 p-4 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="text-red-500 text-sm mb-2">Error loading topics</div>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="text-orange-500 hover:text-orange-600 text-sm"
+                        >
+                            Retry
+                        </button>
+                    </div>
                 </div>
             </aside>
         );
@@ -191,7 +188,7 @@ export default function Sidebar({
                         </button>
                     </div>
 
-                    {/* TOPICS Section */}
+                    {/* STATIC TOPICS Section */}
                     <div className="mb-6">
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-xs font-semibold text-gray-500 dark:text-[#818384] uppercase tracking-wide">
@@ -205,59 +202,52 @@ export default function Sidebar({
                         <div className="space-y-1">
                             {topics.map((topic) => (
                                 <div key={topic.id} className="space-y-1">
-                                    {/* Topic Header - Now a Link */}
-                                    <Link
-                                        href={`/t/${encodeURIComponent(topic.name)}`}
-                                        onClick={() => onClose?.()}
+                                    {/* Topic Header */}
+                                    <button
+                                        onClick={() => toggleTopic(topic.id)}
                                         className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md text-left transition-all duration-150 hover:bg-gray-100 dark:hover:bg-[#272729] group"
                                     >
-                                        <div className="w-7 h-7 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-sm md:text-xs font-bold"
-                                             style={{ backgroundColor: topic.color }}>
+                                        <div
+                                            className="w-7 h-7 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-sm md:text-xs font-bold"
+                                            style={{ backgroundColor: topic.color }}
+                                        >
                                             {topic.icon}
                                         </div>
                                         <div className="flex-1 flex items-center justify-between">
-                                            <span className="font-medium text-base md:text-sm text-gray-900 dark:text-[#D7DADC]">{topic.name}</span>
+                                            <span className="font-medium text-base md:text-sm text-gray-900 dark:text-[#D7DADC]">
+                                                {topic.name}
+                                            </span>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-xs text-gray-500 dark:text-[#818384] bg-gray-100 dark:bg-[#272729] px-2 py-1 rounded-full">
                                                     {topic.channel_count}
                                                 </span>
-                                                <IoChevronForward className="text-gray-400 dark:text-[#818384] text-base md:text-sm" />
+                                                {isTopicExpanded(topic.id) ? (
+                                                    <IoChevronDown className="text-gray-400 dark:text-[#818384] text-base md:text-sm" />
+                                                ) : (
+                                                    <IoChevronForward className="text-gray-400 dark:text-[#818384] text-base md:text-sm" />
+                                                )}
                                             </div>
                                         </div>
-                                    </Link>
+                                    </button>
 
-                                    {/* Channels under this topic */}
+                                    {/* Topic Description when expanded */}
                                     {isTopicExpanded(topic.id) && (
-                                        <div className="ml-6 md:ml-6 space-y-1 border-l-2 border-gray-200 dark:border-[#343536] pl-2 md:pl-2">
-                                            {topicChannels[topic.id] ? (
-                                                topicChannels[topic.id].map((channel) => (
-                                                    <Link
-                                                        key={channel.id}
-                                                        href={`/r/${encodeURIComponent(channel.name)}`}
-                                                        onClick={() => {
-                                                            handleChannelChange(channel.name);
-                                                            onClose?.();
-                                                        }}
-                                                        className={`w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md text-left transition-all duration-150 group ${
-                                                            currentChannel === channel.name
-                                                                ? 'bg-blue-50 dark:bg-[#1E3A5F] text-blue-600 dark:text-white border border-blue-200 dark:border-[#3B82F6]'
-                                                                : 'text-gray-700 dark:text-[#D7DADC] hover:bg-gray-100 dark:hover:bg-[#272729]'
-                                                        }`}
-                                                    >
-                                                        <div className={`w-5 h-5 md:w-4 md:h-4 rounded-full bg-gray-400 dark:bg-[#818384] flex items-center justify-center text-white text-sm md:text-xs ${
-                                                            currentChannel === channel.name ? 'bg-blue-500 dark:bg-[#3B82F6]' : ''
-                                                        }`}>
-                                                            r
-                                                        </div>
-                                                        <span className="font-medium text-base md:text-sm">r/{channel.name}</span>
-                                                        {currentChannel === channel.name && (
-                                                            <div className="ml-auto w-2 h-2 bg-blue-500 dark:bg-[#3B82F6] rounded-full"></div>
-                                                        )}
-                                                    </Link>
-                                                ))
-                                            ) : (
-                                                <div className="px-3 py-2 text-gray-500 dark:text-[#818384] text-sm">Loading channels...</div>
-                                            )}
+                                        <div className="ml-6 md:ml-6 space-y-2 border-l-2 border-gray-200 dark:border-[#343536] pl-2 md:pl-2">
+                                            <p className="px-3 py-2 text-gray-600 dark:text-[#D7DADC] text-sm">
+                                                {topic.description}
+                                            </p>
+                                            <div className="flex items-center justify-between px-3 py-1">
+                                                <span className="text-xs text-gray-500 dark:text-[#818384]">
+                                                    {topic.post_count.toLocaleString()} posts
+                                                </span>
+                                                <Link
+                                                    href={`/t/${encodeURIComponent(topic.name)}`}
+                                                    onClick={() => onClose?.()}
+                                                    className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+                                                >
+                                                    Explore →
+                                                </Link>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

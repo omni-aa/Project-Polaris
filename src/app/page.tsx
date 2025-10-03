@@ -241,14 +241,13 @@ export default function Home() {
                         </div>
                         <div className="h-full overflow-y-auto">
                             <Sidebar
-                                topics={topics}
+
                                 channels={channels}
                                 currentChannel={currentChannel}
                                 username={username}
                                 onChannelChange={setCurrentChannel}
                                 onLogout={handleLogout}
                                 onClose={() => setIsSidebarOpen(false)}
-                                fetchChannelsByTopic={fetchChannelsByTopic}
                                 isLoading={isLoading}
                             />
                         </div>
@@ -259,13 +258,11 @@ export default function Home() {
             {/* Desktop Sidebar */}
             <div className="hidden md:flex">
                 <Sidebar
-                    topics={topics}
                     channels={channels}
                     currentChannel={currentChannel}
                     username={username}
                     onChannelChange={setCurrentChannel}
                     onLogout={handleLogout}
-                    fetchChannelsByTopic={fetchChannelsByTopic}
                     isLoading={isLoading}
                 />
             </div>
