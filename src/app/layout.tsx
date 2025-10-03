@@ -2,7 +2,8 @@
 import './globals.css'
 import { ReactNode } from 'react'
 import {Metadata} from "next";
-import {ThemeProvider} from "next-themes"; // Import ReactNode
+import {ThemeProvider} from "next-themes";
+import ClientLayout from './ClientLayout';
 
 // Type your metadata object
 export const metadata: Metadata = {
@@ -32,7 +33,9 @@ export default function RootLayout({ children }: LayoutProps) {
             enableSystem
             disableTransitionOnChange
         >
-            {children}
+            <ClientLayout>
+                {children}
+            </ClientLayout>
         </ThemeProvider>
         </body>
         </html>

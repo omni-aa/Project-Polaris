@@ -13,6 +13,7 @@ interface MessageListProps {
     }>;
     onImageZoom: (url: string) => void;
 }
+
 export default function MessageList({ messages, onImageZoom }: MessageListProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -21,11 +22,17 @@ export default function MessageList({ messages, onImageZoom }: MessageListProps)
     }, [messages]);
 
     return (
-        <div className="p-4 space-y-4 min-h-full"> {/* Changed padding and height */}
-            {messages.map((msg) => (
-                <Message key={msg.id} message={msg} onImageZoom={onImageZoom} />
-            ))}
-            <div ref={messagesEndRef} className="h-px" /> {/* Added height */}
+        <div className="max-w-4xl mx-auto bg-white min-h-full">
+            {messages.length === 0 ? (
+                <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
+                    No messages yet. Be the first to post in r/{messages[0]?.channel || 'this channel'}!
+                </div>
+            ) : (
+                messages.map((msg) => (
+                    <Message key={msg.id} message={msg} onImageZoom={onImageZoom} />
+                ))
+            )}
+            <div ref={messagesEndRef} className="h-px" />
         </div>
     );
 }

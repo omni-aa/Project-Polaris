@@ -1,99 +1,299 @@
-import {Avatar, Divider} from "@heroui/react";
+import {Avatar} from "@heroui/react";
+import { useState } from "react";
+import { IoChevronDown, IoChevronForward } from "react-icons/io5";
 
+interface Topic {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    color: string;
+    channel_count: number;
+}
+
+interface Channel {
+    id: string;
+    topic_id: string;
+    name: string;
+    description: string;
+    member_count: number;
+}
 
 interface SidebarProps {
-    channels: string[];
+    topics: Topic[];
+    channels: Channel[];
     currentChannel: string;
     username: string;
     onChannelChange: (channel: string) => void;
     onLogout: () => void;
+    onClose?: () => void;
+    fetchChannelsByTopic: (topicId: string) => Promise<Channel[]>;
+    isLoading: boolean;
 }
 
 export default function Sidebar({
+                                    topics,
                                     channels,
                                     currentChannel,
                                     username,
                                     onChannelChange,
                                     onLogout,
+                                    onClose,
+                                    fetchChannelsByTopic,
+                                    isLoading
                                 }: SidebarProps) {
+
+    const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
+    const [topicChannels, setTopicChannels] = useState<Record<string, Channel[]>>({});
+
+    const handleChannelChange = (channel: string) => {
+        onChannelChange(channel);
+        if (onClose) {
+            onClose();
+        }
+    };
+
+    const toggleTopic = async (topic: Topic) => {
+        const newExpandedTopics = new Set(expandedTopics);
+
+        if (expandedTopics.has(topic.id)) {
+            newExpandedTopics.delete(topic.id);
+        } else {
+            newExpandedTopics.add(topic.id);
+            // Fetch channels if not already loaded
+            if (!topicChannels[topic.id]) {
+                try {
+                    const channels = await fetchChannelsByTopic(topic.id);
+                    setTopicChannels(prev => ({
+                        ...prev,
+                        [topic.id]: channels
+                    }));
+                } catch (err) {
+                    console.error("Error loading channels:", err);
+                }
+            }
+        }
+
+        setExpandedTopics(newExpandedTopics);
+    };
+
+    const isTopicExpanded = (topicId: string) => expandedTopics.has(topicId);
+
+    // Mock data for other sections
+    const popularTopics = [
+        "Internet Culture", "Games", "Technology", "Movies & TV",
+        "Music", "Sports", "Science", "Art", "Food", "Travel"
+    ];
+
+    const resources = [
+        "About Reddit", "Help Center", "Blog", "Careers", "Press"
+    ];
+
+    const policies = [
+        "Content Policy", "Privacy Policy", "User Agreement"
+    ];
+
+    if (isLoading) {
+        return (
+            <aside className="w-80 h-full bg-white text-gray-900 flex flex-col border-r border-gray-200 overflow-y-auto">
+                <div className="flex-1 p-4 flex items-center justify-center">
+                    <div className="text-gray-500">Loading topics...</div>
+                </div>
+            </aside>
+        );
+    }
+
     return (
-        <aside className="w-60 h-full bg-[#1e1f22] text-[#dbdee1] flex flex-col" >
-
-            <header className={"text-2xl font-bold flex flex-col justify-center items-center bg-blue-700 text-white py-3 px-5"}>PROXIMUS CHAT</header>
-            {/* Channels section */}
-            <div className="flex-1 overflow-y-auto p-2 py-7">
-                <div className="mb-2">
-                    <div className="text-xs font-semibold text-[#949ba4] uppercase px-2 mb-1 ">
-                        Text Channels
+        <aside className="w-80 h-full bg-white text-gray-900 flex flex-col border-r border-gray-200 overflow-y-auto">
+            {/* Reddit Header */}
+            <div className="p-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-orange-500 rounded-sm flex items-center justify-center">
+                        <span className="text-white font-bold">r</span>
                     </div>
-                    <Divider className="my-4" />
-                    <ul className="space-y-1">
-                        {channels.map((channel) => (
-                            <li key={channel}>
-
-                                <button
-                                    onClick={() => onChannelChange(channel)}
-                                    className={`w-full flex items-center px-2 py-1 rounded text-left ${
-                                        currentChannel === channel
-                                            ? 'bg-[#40444b] text-white'
-                                            : 'text-[#96989d] hover:bg-[#3a3d44] hover:text-white'
-                                    }`}
-                                >
-                                    <span className="text-lg mr-1">#</span>
-                                    <span>{channel}</span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
+                    <div>
+                        <h1 className="font-bold text-lg text-gray-900">reddit</h1>
+                        <p className="text-gray-500 text-xs">The front page of the internet</p>
+                    </div>
                 </div>
             </div>
 
-            {/* User profile footer */}
-            <div className="p-2 bg-[#232428] border-t border-[#2b2d31] ">
-                <div className="flex items-center justify-between p-1 rounded hover:bg-[#3a3d44] transition-colors ">
-                    <div className="flex items-center overflow-hidden ">
-                        <div className="relative ">
+            {/* Main Navigation Content */}
+            <div className="flex-1 p-4">
+                {/* Navigation Links */}
+                <div className="space-y-1 mb-6">
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 font-medium text-sm">
+                        <span className="text-gray-500">🏠</span>
+                        <span>Home</span>
+                    </button>
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 font-medium text-sm">
+                        <span className="text-gray-500">🔥</span>
+                        <span>Popular</span>
+                    </button>
+                    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 font-medium text-sm">
+                        <span className="text-gray-500">🎯</span>
+                        <span>All</span>
+                    </button>
+                </div>
 
-                            <div className="w-8 h-8 rounded-full bg-[#5865f2] flex items-center justify-center text-white font-medium mr-2">
-                                <Avatar size="md" name={username.charAt(0).toUpperCase()}
-                                className="w-8 h-8 rounded-full"
-                                        isBordered color="danger"
+                {/* TOPICS Section */}
+                <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                            TOPICS
+                        </h2>
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">
+                            {topics.length}
+                        </span>
+                    </div>
 
-                                />
+                    <div className="space-y-1">
+                        {topics.map((topic) => (
+                            <div key={topic.id} className="space-y-1">
+                                {/* Topic Header */}
+                                <button
+                                    onClick={() => toggleTopic(topic)}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-150 hover:bg-gray-100 group"
+                                >
+                                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                         style={{ backgroundColor: topic.color }}>
+                                        {topic.icon}
+                                    </div>
+                                    <div className="flex-1 flex items-center justify-between">
+                                        <span className="font-medium text-sm">{topic.name}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                {topic.channel_count}
+                                            </span>
+                                            {isTopicExpanded(topic.id) ? (
+                                                <IoChevronDown className="text-gray-400 text-sm" />
+                                            ) : (
+                                                <IoChevronForward className="text-gray-400 text-sm" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
 
+                                {/* Channels under this topic */}
+                                {isTopicExpanded(topic.id) && (
+                                    <div className="ml-6 space-y-1 border-l-2 border-gray-200 pl-2">
+                                        {topicChannels[topic.id] ? (
+                                            topicChannels[topic.id].map((channel) => (
+                                                <button
+                                                    key={channel.id}
+                                                    onClick={() => handleChannelChange(channel.name)}
+                                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-all duration-150 group ${
+                                                        currentChannel === channel.name
+                                                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                                                            : 'text-gray-700 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    <div className={`w-4 h-4 rounded-full bg-gray-400 flex items-center justify-center text-white text-xs ${
+                                                        currentChannel === channel.name ? 'bg-blue-500' : ''
+                                                    }`}>
+                                                        #
+                                                    </div>
+                                                    <span className="font-medium text-sm">r/{channel.name}</span>
+                                                    {currentChannel === channel.name && (
+                                                        <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                                                    )}
+                                                </button>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-2 text-gray-500 text-sm">Loading channels...</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+                        ))}
+                    </div>
+                </div>
 
+
+
+                {/* POPULAR TOPICS Section */}
+                <div className="mb-6">
+                    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                        POPULAR TOPICS
+                    </h2>
+                    <div className="space-y-1">
+                        {popularTopics.slice(0, 5).map((topic) => (
+                            <button
+                                key={topic}
+                                className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100 text-sm"
+                            >
+                                <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                                <span>{topic}</span>
+                            </button>
+                        ))}
+                        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-500 hover:bg-gray-100 text-sm font-medium">
+                            <span className="text-lg">⊕</span>
+                            <span>See more</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* RESOURCES Section */}
+                <div className="mb-6">
+                    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                        RESOURCES
+                    </h2>
+                    <div className="space-y-1">
+                        {resources.map((resource) => (
+                            <button
+                                key={resource}
+                                className="w-full text-left px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 text-sm"
+                            >
+                                {resource}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Policies Section */}
+                <div className="space-y-1">
+                    {policies.map((policy) => (
+                        <button
+                            key={policy}
+                            className="w-full text-left px-3 py-1 text-gray-500 hover:text-gray-700 text-xs"
+                        >
+                            {policy}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* User Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+                {/* User Info */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            {username.charAt(0).toUpperCase()}
                         </div>
-
-                        <div className="overflow-hidden">
-                            <div className="text-sm font-semibold text-white truncate">{username}</div>
-
-                            <div className="text-xs text-[#b5bac1] truncate">Online</div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">
+                                u/{username}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                                1 karma
+                            </div>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-1">
+
+                    <div className="flex items-center gap-1">
                         <button
-                            className="text-[#b5bac1] hover:text-white p-1 rounded hover:bg-[#3a3d44] transition-colors"
-                            title="Mute"
+                            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-all duration-200"
+                            title="Settings"
                         >
-                            <svg width="16" height="16" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M6.7 11H5C5 12.19 5.34 13.3 5.9 14.28L7.13 13.05C6.86 12.43 6.7 11.74 6.7 11Z"/>
-                                <path fill="currentColor" d="M9.01 11.085C9.015 11.1125 9.02 11.14 9.02 11.17L15 5.18V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 11.03 9.005 11.0575 9.01 11.085Z"/>
-                                <path fill="currentColor" d="M11.7237 16.0927L10.9632 16.8531L10.2533 17.5688C10.4978 17.633 10.747 17.6839 11 17.72V22H13V17.72C16.28 17.23 19 14.41 19 11H17.3C17.3 13.58 15.33 15.7 12.83 16.1L11.7237 16.0927Z"/>
-                                <path fill="currentColor" d="M21 4.27L19.73 3L3 19.73L4.27 21L8.46 16.82L9.69 15.58L11.35 13.92L14.99 10.28L17.74 7.53L21 4.27Z"/>
-                            </svg>
-                        </button>
-                        <button
-                            className="text-[#b5bac1] hover:text-white p-1 rounded hover:bg-[#3a3d44] transition-colors"
-                            title="Deafen"
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24">
-                                <path fill="currentColor" d="M12 2.00305C6.486 2.00305 2 6.48805 2 12.0031V20.0031C2 21.1071 2.895 22.0031 4 22.0031H6C7.104 22.0031 8 21.1071 8 20.0031V17.0031C8 15.8991 7.104 15.0031 6 15.0031H4V12.0031C4 7.59105 7.589 4.00305 12 4.00305C16.411 4.00305 20 7.59105 20 12.0031V15.0031H18C16.896 15.0031 16 15.8991 16 17.0031V20.0031C16 21.1071 16.896 22.0031 18 22.0031H20C21.104 22.0031 22 21.1071 22 20.0031V12.0031C22 6.48805 17.514 2.00305 12 2.00305Z"/>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                         </button>
                         <button
                             onClick={onLogout}
-                            className="text-[#b5bac1] hover:text-white p-1 rounded hover:bg-[#3a3d44] transition-colors"
+                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all duration-200"
                             title="Logout"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -102,6 +302,35 @@ export default function Sidebar({
                                 <line x1="21" y1="12" x2="9" y2="12"/>
                             </svg>
                         </button>
+                    </div>
+                </div>
+
+                {/* Mobile Logout Button */}
+                <div className="md:hidden">
+                    <button
+                        onClick={onLogout}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200 border border-red-200"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                        <span className="font-medium">Log Out</span>
+                    </button>
+                </div>
+
+                {/* Policies & Copyright */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                    <div className="grid grid-cols-2 gap-1 text-xs text-gray-500">
+                        {["Help", "Reddit Coins", "Reddit Premium", "Topics", "About"].map((item) => (
+                            <button key={item} className="text-left hover:text-gray-700 transition-colors">
+                                {item}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-4">
+                        © 2025 Reddit, Inc. All rights reserved.
                     </div>
                 </div>
             </div>
