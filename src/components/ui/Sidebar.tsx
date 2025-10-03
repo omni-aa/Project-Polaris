@@ -169,20 +169,22 @@ export default function Sidebar({
                 <div className="flex-1 p-4 md:p-4">
                     {/* Navigation Links */}
                     <div className="space-y-1 mb-6">
-                        <button
-                            onClick={() => {
-                                router.push('/home');
-                                if (onClose) onClose();
-                            }}
+                        <Link
+                            href="/home"
+                            onClick={() => onClose?.()}
                             className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md hover:bg-gray-100 dark:hover:bg-[#272729] text-gray-700 dark:text-[#D7DADC] font-medium text-sm transition-colors duration-200"
                         >
                             <span className="text-gray-500 dark:text-[#818384] text-base md:text-sm">🏠</span>
                             <span className="text-base md:text-sm">Home</span>
-                        </button>
-                        <button className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md hover:bg-gray-100 dark:hover:bg-[#272729] text-gray-700 dark:text-[#D7DADC] font-medium text-sm transition-colors duration-200">
+                        </Link>
+                        <Link
+                            href="/"
+                            onClick={() => onClose?.()}
+                            className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md hover:bg-gray-100 dark:hover:bg-[#272729] text-gray-700 dark:text-[#D7DADC] font-medium text-sm transition-colors duration-200"
+                        >
                             <span className="text-gray-500 dark:text-[#818384] text-base md:text-sm">🔥</span>
                             <span className="text-base md:text-sm">Popular</span>
-                        </button>
+                        </Link>
                         <button className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md hover:bg-gray-100 dark:hover:bg-[#272729] text-gray-700 dark:text-[#D7DADC] font-medium text-sm transition-colors duration-200">
                             <span className="text-gray-500 dark:text-[#818384] text-base md:text-sm">🎯</span>
                             <span className="text-base md:text-sm">All</span>
@@ -203,9 +205,10 @@ export default function Sidebar({
                         <div className="space-y-1">
                             {topics.map((topic) => (
                                 <div key={topic.id} className="space-y-1">
-                                    {/* Topic Header */}
-                                    <button
-                                        onClick={() => toggleTopic(topic)}
+                                    {/* Topic Header - Now a Link */}
+                                    <Link
+                                        href={`/t/${encodeURIComponent(topic.name)}`}
+                                        onClick={() => onClose?.()}
                                         className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md text-left transition-all duration-150 hover:bg-gray-100 dark:hover:bg-[#272729] group"
                                     >
                                         <div className="w-7 h-7 md:w-6 md:h-6 rounded-full flex items-center justify-center text-white text-sm md:text-xs font-bold"
@@ -218,23 +221,23 @@ export default function Sidebar({
                                                 <span className="text-xs text-gray-500 dark:text-[#818384] bg-gray-100 dark:bg-[#272729] px-2 py-1 rounded-full">
                                                     {topic.channel_count}
                                                 </span>
-                                                {isTopicExpanded(topic.id) ? (
-                                                    <IoChevronDown className="text-gray-400 dark:text-[#818384] text-base md:text-sm" />
-                                                ) : (
-                                                    <IoChevronForward className="text-gray-400 dark:text-[#818384] text-base md:text-sm" />
-                                                )}
+                                                <IoChevronForward className="text-gray-400 dark:text-[#818384] text-base md:text-sm" />
                                             </div>
                                         </div>
-                                    </button>
+                                    </Link>
 
                                     {/* Channels under this topic */}
                                     {isTopicExpanded(topic.id) && (
                                         <div className="ml-6 md:ml-6 space-y-1 border-l-2 border-gray-200 dark:border-[#343536] pl-2 md:pl-2">
                                             {topicChannels[topic.id] ? (
                                                 topicChannels[topic.id].map((channel) => (
-                                                    <button
+                                                    <Link
                                                         key={channel.id}
-                                                        onClick={() => handleChannelChange(channel.name)}
+                                                        href={`/r/${encodeURIComponent(channel.name)}`}
+                                                        onClick={() => {
+                                                            handleChannelChange(channel.name);
+                                                            onClose?.();
+                                                        }}
                                                         className={`w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md text-left transition-all duration-150 group ${
                                                             currentChannel === channel.name
                                                                 ? 'bg-blue-50 dark:bg-[#1E3A5F] text-blue-600 dark:text-white border border-blue-200 dark:border-[#3B82F6]'
@@ -244,13 +247,13 @@ export default function Sidebar({
                                                         <div className={`w-5 h-5 md:w-4 md:h-4 rounded-full bg-gray-400 dark:bg-[#818384] flex items-center justify-center text-white text-sm md:text-xs ${
                                                             currentChannel === channel.name ? 'bg-blue-500 dark:bg-[#3B82F6]' : ''
                                                         }`}>
-                                                            #
+                                                            r
                                                         </div>
                                                         <span className="font-medium text-base md:text-sm">r/{channel.name}</span>
                                                         {currentChannel === channel.name && (
                                                             <div className="ml-auto w-2 h-2 bg-blue-500 dark:bg-[#3B82F6] rounded-full"></div>
                                                         )}
-                                                    </button>
+                                                    </Link>
                                                 ))
                                             ) : (
                                                 <div className="px-3 py-2 text-gray-500 dark:text-[#818384] text-sm">Loading channels...</div>
@@ -269,13 +272,15 @@ export default function Sidebar({
                         </h2>
                         <div className="space-y-1">
                             {popularTopics.slice(0, 5).map((topic) => (
-                                <button
+                                <Link
                                     key={topic}
+                                    href={`/t/${encodeURIComponent(topic)}`}
+                                    onClick={() => onClose?.()}
                                     className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md text-gray-700 dark:text-[#D7DADC] hover:bg-gray-100 dark:hover:bg-[#272729] text-base md:text-sm transition-colors duration-200"
                                 >
                                     <span className="w-2 h-2 bg-gray-400 dark:bg-[#818384] rounded-full"></span>
                                     <span>{topic}</span>
-                                </button>
+                                </Link>
                             ))}
                             <button className="w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-lg md:rounded-md text-gray-500 dark:text-[#818384] hover:bg-gray-100 dark:hover:bg-[#272729] text-base md:text-sm font-medium transition-colors duration-200">
                                 <span className="text-lg">⊕</span>

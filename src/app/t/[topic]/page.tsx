@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Sidebar from "@/components/ui/Sidebar";
 import { useSocket } from "@/app/SocketContext";
 
@@ -21,23 +21,20 @@ interface Channel {
     member_count: number;
 }
 
-export default function HomePage() {
+export default function TopicPage() {
+    const params = useParams();
+    const router = useRouter();
+    const topicName = decodeURIComponent(params.topic as string);
+
     const [username, setUsername] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [topics, setTopics] = useState<Topic[]>([]);
     const [channels, setChannels] = useState<Channel[]>([]);
+    const [topicChannels, setTopicChannels] = useState<Channel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const router = useRouter();
 
-    // Use socket context - this might be undefined if not properly wrapped
     const { currentChannel, setCurrentChannel } = useSocket();
-
-    useEffect(() => {
-        if (currentChannel) {
-            setCurrentChannel("");
-        }
-    }, [currentChannel, setCurrentChannel]);
 
     // Check authentication
     useEffect(() => {
@@ -52,7 +49,7 @@ export default function HomePage() {
         }
     }, [router]);
 
-    // Fetch topics directly without socket
+    // Fetch all topics
     useEffect(() => {
         if (!token) return;
 
@@ -69,7 +66,34 @@ export default function HomePage() {
             });
     }, [token]);
 
-    // Fetch channels directly without socket
+    // Fetch channels for this specific topic
+    useEffect(() => {
+        if (!token) return;
+
+        const fetchTopicChannels = async () => {
+            try {
+                // First get all topics to find the matching one
+                const topicsRes = await fetch("http://localhost:3001/topics");
+                const allTopics: Topic[] = await topicsRes.json();
+
+                const currentTopic = allTopics.find(t =>
+                    t.name.toLowerCase() === topicName.toLowerCase()
+                );
+
+                if (currentTopic) {
+                    const channelsRes = await fetch(`http://localhost:3001/topics/${currentTopic.id}/channels`);
+                    const channelsData: Channel[] = await channelsRes.json();
+                    setTopicChannels(channelsData);
+                }
+            } catch (err) {
+                console.error("Error fetching topic channels:", err);
+            }
+        };
+
+        fetchTopicChannels();
+    }, [token, topicName]);
+
+    // Fetch all channels
     useEffect(() => {
         if (!token) return;
 
@@ -104,13 +128,10 @@ export default function HomePage() {
         }
     };
 
-    // Safe channel change function that doesn't rely on socket
     const handleChannelChange = (channelName: string) => {
-        // If socket context is available, use it
         if (setCurrentChannel) {
             setCurrentChannel(channelName);
         }
-        // Navigate to main app where socket is fully functional
         router.push("/");
     };
 
@@ -201,8 +222,8 @@ export default function HomePage() {
                         </button>
 
                         <div className="flex-1 text-center md:text-left">
-                            <h1 className="text-2xl font-bold text-gray-900">Home</h1>
-                            <p className="text-gray-600 mt-1">Welcome to your Reddit clone</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Topic: {topicName}</h1>
+                            <p className="text-gray-600 mt-1">{topicChannels.length} channels in this topic</p>
                         </div>
 
                         <div className="flex items-center gap-4">
@@ -213,83 +234,55 @@ export default function HomePage() {
                     </div>
                 </header>
 
-                {/* Welcome Content */}
+                {/* Topic Content */}
                 <div className="flex-1 overflow-y-auto p-6">
                     <div className="max-w-4xl mx-auto">
-                        <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-8 text-center">
-                            <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-6">
-                                r
-                            </div>
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                                Welcome to Reddit, u/{username}!
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-8">
+                            <h2 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+                                Channels in {topicName}
                             </h2>
-                            <p className="text-gray-600 text-lg mb-8 max-w-2xl mx-auto">
-                                Explore communities, join conversations, and discover content that matters to you.
-                            </p>
 
-                            <div className="grid md:grid-cols-3 gap-6 mb-8">
-                                <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
-                                    <div className="text-blue-500 text-2xl mb-3">📚</div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Browse Topics</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Explore different topics and find communities that match your interests
-                                    </p>
+                            {topicChannels.length > 0 ? (
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {topicChannels.map((channel) => (
+                                        <div
+                                            key={channel.id}
+                                            className="p-6 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 cursor-pointer transition-colors duration-200"
+                                            onClick={() => handleChannelChange(channel.name)}
+                                        >
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                    r/
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900">r/{channel.name}</h3>
+                                                    <p className="text-gray-600 text-sm">{channel.member_count} members</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-gray-600 text-sm line-clamp-2">
+                                                {channel.description}
+                                            </p>
+                                            <button className="mt-4 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-full transition-colors duration-200">
+                                                Join Channel
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
-
-                                <div className="p-6 bg-green-50 rounded-lg border border-green-200">
-                                    <div className="text-green-500 text-2xl mb-3">💬</div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Join Channels</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Participate in channel discussions and connect with like-minded people
-                                    </p>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <div className="text-gray-400 text-6xl mb-4">📂</div>
+                                    <h3 className="text-xl font-semibold text-gray-600 mb-2">No channels found</h3>
+                                    <p className="text-gray-500">This topic doesn't have any channels yet.</p>
                                 </div>
+                            )}
 
-                                <div className="p-6 bg-purple-50 rounded-lg border border-purple-200">
-                                    <div className="text-purple-500 text-2xl mb-3">🚀</div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Create Posts</h3>
-                                    <p className="text-gray-600 text-sm">
-                                        Share your thoughts, images, and engage with the community
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <div className="mt-8 text-center">
                                 <button
                                     onClick={() => router.push("/")}
                                     className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-full transition-colors duration-200"
                                 >
-                                    Go to Main App
+                                    Back to Main App
                                 </button>
-                                <button
-                                    onClick={() => {
-                                        if (channels.length > 0) {
-                                            handleChannelChange(channels[0].name);
-                                        }
-                                    }}
-                                    className="px-6 py-3 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-full transition-colors duration-200"
-                                >
-                                    Explore Channels
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Quick Stats */}
-                        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="bg-white p-4 rounded-lg border border-gray-300 text-center">
-                                <div className="text-2xl font-bold text-gray-900">{topics.length}</div>
-                                <div className="text-gray-600 text-sm">Topics</div>
-                            </div>
-                            <div className="bg-white p-4 rounded-lg border border-gray-300 text-center">
-                                <div className="text-2xl font-bold text-gray-900">{channels.length}</div>
-                                <div className="text-gray-600 text-sm">Channels</div>
-                            </div>
-                            <div className="bg-white p-4 rounded-lg border border-gray-300 text-center">
-                                <div className="text-2xl font-bold text-gray-900">1</div>
-                                <div className="text-gray-600 text-sm">Online</div>
-                            </div>
-                            <div className="bg-white p-4 rounded-lg border border-gray-300 text-center">
-                                <div className="text-2xl font-bold text-gray-900">0</div>
-                                <div className="text-gray-600 text-sm">Posts</div>
                             </div>
                         </div>
                     </div>
